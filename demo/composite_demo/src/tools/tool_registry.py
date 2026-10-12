@@ -15,12 +15,10 @@ from typing import Annotated, get_origin
 from .browser import tool_call as browser
 from .cogview import tool_call as cogview
 from .interface import ToolObservation
-from .python import tool_call as python
 
 
 ALL_TOOLS = {
     "simple_browser": browser,
-    "python": python,
     "cogview": cogview,
 }
 

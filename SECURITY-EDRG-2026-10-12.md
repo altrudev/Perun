@@ -2,9 +2,11 @@
 
 The composite demo's get_shell hook previously registered an arbitrary
 model-requested Linux shell command. It is now unregistered and always raises
-PermissionError, rather than exposing unrestricted host command execution.
+PermissionError. The unrestricted Jupyter-backed python tool is also no
+longer exposed through ALL_TOOLS, preventing the equivalent arbitrary-code
+execution path. This deliberately reduces demo functionality.
 Replace it only with operator-enrolled, fixed-command, sandboxed execution via
-a governed adapter. Python/tool execution in other demo components is outside
+a governed adapter. Direct imports or execution interfaces outside the model tool registry remain outside
 the scope of this change and is NOT qualified for untrusted agent input.
 
 The GLM4V server previously downloaded arbitrary image URLs with TLS
