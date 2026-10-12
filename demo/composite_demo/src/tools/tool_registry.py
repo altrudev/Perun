@@ -7,7 +7,6 @@ through defined interfaces.
 import copy
 import inspect
 import json
-import subprocess
 import traceback
 from collections.abc import Callable
 from types import GenericAlias
@@ -157,27 +156,15 @@ def get_weather(
     return str(ret)
 
 
-@register_tool
 def get_shell(
     query: Annotated[str, "The command should run in Linux shell", True],
 ) -> str:
+    """Disabled: arbitrary shell is never an authorized tool capability.
+
+    Callers must use a separately authenticated, operator-enrolled,
+    allowlisted execution adapter with independently enforced bounds.
     """
-    Use shell to run command
-    """
-    if not isinstance(query, str):
-        raise TypeError("Command must be a string")
-    try:
-        result = subprocess.run(
-            query,
-            shell=True,
-            check=True,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
-        )
-        return result.stdout
-    except subprocess.CalledProcessError as e:
-        return e.stderr
+    raise PermissionError("arbitrary shell execution is disabled; use a governed execution adapter")
 
 
 if __name__ == "__main__":

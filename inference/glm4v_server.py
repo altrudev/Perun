@@ -220,6 +220,28 @@ def generate_glm4v(model: AutoModel, tokenizer: AutoTokenizer, params: dict):
     return response
 
 
+def decode_inline_image_url(image_url: str):
+    """Bounded inline image decoder. Arbitrary remote URLs are not fetched.
+
+    Network image retrieval needs a separate operator-managed SSRF-safe fetcher;
+    TLS verification and redirect checks alone do not defeat DNS rebinding.
+    """
+    if not isinstance(image_url, str) or not image_url.startswith(
+        ("data:image/jpeg;base64,", "data:image/png;base64,")
+    ):
+        raise ValueError("remote image URLs are disabled; provide an inline JPEG or PNG")
+    encoded = image_url.split(",", 1)[1]
+    if len(encoded) > 8_000_000:
+        raise ValueError("inline image payload exceeds the configured bound")
+    image_bytes = base64.b64decode(encoded, validate=True)
+    if len(image_bytes) > 6_000_000:
+        raise ValueError("decoded image payload exceeds the configured bound")
+    with Image.open(BytesIO(image_bytes)) as source:
+        if source.width <= 0 or source.height <= 0 or source.width * source.height > 20_000_000:
+            raise ValueError("image dimensions exceed the configured bound")
+        return source.convert("RGB")
+
+
 def process_history_and_images(
     messages: List[ChatMessageInput],
 ) -> Tuple[Optional[str], Optional[List[Tuple[str, str]]], Optional[List[Image.Image]]]:
@@ -252,14 +274,7 @@ def process_history_and_images(
             for item in content:
                 if isinstance(item, ImageUrlContent):
                     image_url = item.image_url.url
-                    if image_url.startswith("data:image/jpeg;base64,"):
-                        base64_encoded_image = image_url.split("data:image/jpeg;base64,")[1]
-                        image_data = base64.b64decode(base64_encoded_image)
-                        image = Image.open(BytesIO(image_data)).convert("RGB")
-                    else:
-                        response = requests.get(image_url, verify=False)
-                        image = Image.open(BytesIO(response.content)).convert("RGB")
-                    image_list.append(image)
+                    image_list.append(decode_inline_image_url(image_url))
 
         if role == "user":
             if i == len(messages) - 1:  # 最后一条用户消息
